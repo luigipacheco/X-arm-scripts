@@ -50,44 +50,92 @@ arm.set_state(0)
 time.sleep(0.1)
 
 step = 5
+astep = 1
+speed = 200
+aspeed = 100
 
 def show(key):
     currentPos = arm.get_position()
     x=currentPos[1][0]
     y=currentPos[1][1]
+    a=currentPos[1][3]
+    b=currentPos[1][4]
     print(currentPos)
     if key == Key.up:
         x=x+step
         print("up")
         print(x)
-        mvpose = [x, y, 200, 180, 0, 0]
-        ret = arm.set_servo_cartesian(mvpose, speed=200, mvacc=2000)
+        mvpose = [x, y, 200, a, b, 0]
+        ret = arm.set_servo_cartesian(mvpose, speed=speed, mvacc=2000)
         #print('set_servo_cartesian, ret={}'.format(ret))
         time.sleep(0.01)
     if key == Key.down:
         x=x-step
         print("up")
         print(x)
-        mvpose = [x, y, 200, 180, 0, 0]
-        ret = arm.set_servo_cartesian(mvpose, speed=200, mvacc=2000)
+        mvpose = [x, y, 200, a, b, 0]
+        ret = arm.set_servo_cartesian(mvpose, speed=speed, mvacc=2000)
         #print('set_servo_cartesian, ret={}'.format(ret))
         time.sleep(0.01)
     if key == Key.left:
         y=y+step
         print("left")
         print(y)
-        mvpose = [x, y, 200, 180, 0, 0]
-        ret = arm.set_servo_cartesian(mvpose, speed=200, mvacc=2000)
+        mvpose = [x, y, 200, a, b, 0]
+        ret = arm.set_servo_cartesian(mvpose, speed=speed, mvacc=2000)
         #print('set_servo_cartesian, ret={}'.format(ret))
         time.sleep(0.01)
     if key == Key.right:
         y=y-step
         print("right")
         print(y)
-        mvpose = [x, y, 200, 180, 0, 0]
-        ret = arm.set_servo_cartesian(mvpose, speed=200, mvacc=2000)
+        mvpose = [x, y, 200, a, b, 0]
+        ret = arm.set_servo_cartesian(mvpose, speed=speed, mvacc=2000)
         #print('set_servo_cartesian, ret={}'.format(ret))
         time.sleep(0.01)
+    try:
+        if key.char == "w":
+            a=a-astep
+            print("roll-")
+
+            mvpose = [x, y, 200, a, b, 0]
+            ret = arm.set_servo_cartesian(mvpose, speed=aspeed, mvacc=2000)
+            #print('set_servo_cartesian, ret={}'.format(ret))
+            time.sleep(0.01)
+    except AttributeError:
+        print('special key {0} pressed'.format(key))
+    try:
+        if key.char == "s":
+            a=a+astep
+            print("roll+")
+            mvpose = [x, y, 200, a, b, 0]
+            ret = arm.set_servo_cartesian(mvpose, speed=aspeed, mvacc=2000)
+            #print('set_servo_cartesian, ret={}'.format(ret))
+            time.sleep(0.01)
+    except AttributeError:
+        print('special key {0} pressed'.format(key))
+
+    try:
+        if key.char == "a":
+            b=b-astep
+            print("roll-")
+
+            mvpose = [x, y, 200, a, b, 0]
+            ret = arm.set_servo_cartesian(mvpose, speed=aspeed, mvacc=2000)
+            #print('set_servo_cartesian, ret={}'.format(ret))
+            time.sleep(0.01)
+    except AttributeError:
+        print('special key {0} pressed'.format(key))
+    try:
+        if key.char == "d":
+            b=b+astep
+            print("roll+")
+            mvpose = [x, y, 200, a, b, 0]
+            ret = arm.set_servo_cartesian(mvpose, speed=aspeed, mvacc=2000)
+            #print('set_servo_cartesian, ret={}'.format(ret))
+            time.sleep(0.01)
+    except AttributeError:
+        print('special key {0} pressed'.format(key))
 
 
     # by pressing 'delete' button
