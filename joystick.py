@@ -32,36 +32,36 @@ while True:
     # Get joystick values
     axis_x = joystick.get_axis(0)
     axis_y = joystick.get_axis(1)
-    button_1 = joystick.get_button(0)
-    button_2 = joystick.get_button(1)
-    button_3 = joystick.get_button(2)
+    b = joystick.get_button(0)
+    a = joystick.get_button(1)
+    reset = joystick.get_button(7)
     hat = joystick.get_hat(0)
 
     # Jog the xArm
-    if button_1:   #jog on XY plane
+    if b:   #jog on XY plane
         arm.set_mode(1)
         arm.set_state(0)
         print("xy")
         pos = list(arm.get_position())
         print(pos)
-        pos[1][0] -= axis_y * step  # Convert joystick position to xArm position (assuming 1:10 scale)
-        pos[1][1] -= axis_x * step  # Convert joystick position to xArm position (assuming 1:10 scale)
+        pos[1][0] -= axis_y * step
+        pos[1][1] -= axis_x * step
         mvpose = [pos[1][0], pos[1][1], pos[1][2], pos[1][3], pos[1][4], pos[1][5]]
         ret = arm.set_servo_cartesian(mvpose, speed=100, mvacc=2000)
         time.sleep(0.01)
 
-    if button_2: #jog on Roll and Pitch
+    if a: #jog on Roll and Pitch
         arm.set_mode(1)
         arm.set_state(0)
         print("roll pitch")
         pos = list(arm.get_position())
         print(pos)
-        pos[1][3] += axis_x * step/10  # Convert joystick position to xArm position (assuming 1:10 scale)
-        pos[1][4] -= axis_y * step/10  # Convert joystick position to xArm position (assuming 1:10 scale)
+        pos[1][3] += axis_x * step/10
+        pos[1][4] -= axis_y * step/10
         mvpose = [pos[1][0], pos[1][1], pos[1][2], pos[1][3], pos[1][4], pos[1][5]]
         ret = arm.set_servo_cartesian(mvpose, speed=100, mvacc=2000)
     #reset the robot
-    if button_3:
+    if reset:
         print("reset")
         arm.motion_enable(enable=True)
         arm.set_mode(0)
@@ -76,7 +76,7 @@ while True:
         arm.set_state(0)
         pos = list(arm.get_position())
         print(pos)
-        pos[1][2] += step*0.5  # Convert joystick position to xArm position (assuming 1:10 scale)
+        pos[1][2] += step*0.5
         mvpose = [pos[1][0], pos[1][1], pos[1][2], pos[1][3], pos[1][4], pos[1][5]]
         ret = arm.set_servo_cartesian(mvpose, speed=100, mvacc=2000)
         time.sleep(0.01)
@@ -86,7 +86,7 @@ while True:
         arm.set_state(0)
         pos = list(arm.get_position())
         print(pos)
-        pos[1][2] -= step*0.5  # Convert joystick position to xArm position (assuming 1:10 scale)
+        pos[1][2] -= step*0.5
         mvpose = [pos[1][0], pos[1][1], pos[1][2], pos[1][3], pos[1][4], pos[1][5]]
         ret = arm.set_servo_cartesian(mvpose, speed=100, mvacc=2000)
         time.sleep(0.01)
