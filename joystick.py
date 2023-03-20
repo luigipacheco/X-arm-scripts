@@ -35,6 +35,7 @@ while True:
     button_1 = joystick.get_button(0)
     button_2 = joystick.get_button(1)
     button_3 = joystick.get_button(2)
+    hat = joystick.get_hat(0)
 
     # Jog the xArm
     if button_1:   #jog on XY plane
@@ -59,6 +60,7 @@ while True:
         pos[1][4] -= axis_y * step/10  # Convert joystick position to xArm position (assuming 1:10 scale)
         mvpose = [pos[1][0], pos[1][1], pos[1][2], pos[1][3], pos[1][4], pos[1][5]]
         ret = arm.set_servo_cartesian(mvpose, speed=100, mvacc=2000)
+    #reset the robot
     if button_3:
         print("reset")
         arm.motion_enable(enable=True)
@@ -67,5 +69,49 @@ while True:
         arm.reset(wait=True)
         arm.set_position(*[200, 0, 200, 180, 0, 0], wait=True)
         time.sleep(1)
+    # move Z
+    if hat[1]>0:
+        print("up")
+        arm.set_mode(1)
+        arm.set_state(0)
+        pos = list(arm.get_position())
+        print(pos)
+        pos[1][2] += step*0.5  # Convert joystick position to xArm position (assuming 1:10 scale)
+        mvpose = [pos[1][0], pos[1][1], pos[1][2], pos[1][3], pos[1][4], pos[1][5]]
+        ret = arm.set_servo_cartesian(mvpose, speed=100, mvacc=2000)
+        time.sleep(0.01)
+    if hat[1]<0:
+        print("up")
+        arm.set_mode(1)
+        arm.set_state(0)
+        pos = list(arm.get_position())
+        print(pos)
+        pos[1][2] -= step*0.5  # Convert joystick position to xArm position (assuming 1:10 scale)
+        mvpose = [pos[1][0], pos[1][1], pos[1][2], pos[1][3], pos[1][4], pos[1][5]]
+        ret = arm.set_servo_cartesian(mvpose, speed=100, mvacc=2000)
+        time.sleep(0.01)
+
+    #jaw
+    if hat[0]>0:
+        print("jaw+")
+        arm.set_mode(1)
+        arm.set_state(0)
+        pos = list(arm.get_position())
+        print(pos)
+        pos[1][5] += step*0.1
+        mvpose = [pos[1][0], pos[1][1], pos[1][2], pos[1][3], pos[1][4], pos[1][5]]
+        ret = arm.set_servo_cartesian(mvpose, speed=100, mvacc=2000)
+        time.sleep(0.01)
+    if hat[0]<0:
+        print("jaw-")
+        arm.set_mode(1)
+        arm.set_state(0)
+        pos = list(arm.get_position())
+        print(pos)
+        pos[1][5] -= step*0.1
+        mvpose = [pos[1][0], pos[1][1], pos[1][2], pos[1][3], pos[1][4], pos[1][5]]
+        ret = arm.set_servo_cartesian(mvpose, speed=100, mvacc=2000)
+        time.sleep(0.01)
+
     # Wait for a short period before checking again
     pygame.time.wait(10)# Write your code here :-)
