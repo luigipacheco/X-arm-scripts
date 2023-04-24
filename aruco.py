@@ -39,7 +39,8 @@ code = arm.set_reduced_tcp_boundary([x_max, x_min, y_max, y_min, z_max, z_min])
 successes, failures = pygame.init()
 print("Initializing pygame: {0} successes and {1} failures.".format(successes, failures))
 
-screen = pygame.display.set_mode((720, 720))
+screen = pygame.display.set_mode((900, 900))
+pygame_w, pygame_h = pygame.display.get_surface().get_size()
 clock = pygame.time.Clock()
 FPS = 60
 step = 5
@@ -50,17 +51,18 @@ RED = (255, 0, 0)
 def nmap(x,in_min,in_max,out_min,out_max):
     out_x = (x-in_min) * (out_max - out_min) / (in_max - in_min) + out_min
     return(out_x)
-def screen_to_normal(x,y):
-    w, h = pygame.display.get_surface().get_size()
-    n_x = x/w
-    n_y = y/h
+def screen_to_normal(x,y, width, height):
+    # w, h = pygame.display.get_surface().get_size()
+    n_x = x/ (width*1.0)
+    n_y = y/ (height*1.0)
     return(n_x,n_y)
 
+
 def draw_boundary_limits(screen, x_min, x_max, y_min, y_max, color=(0, 255, 0)):
-    pygame.draw.line(screen, color, (x_min, y_min), (x_min, y_max), 2)  # Left vertical line
-    pygame.draw.line(screen, color, (x_max, y_min), (x_max, y_max), 2)  # Right vertical line
-    pygame.draw.line(screen, color, (x_min, y_min), (x_max, y_min), 2)  # Top horizontal line
-    pygame.draw.line(screen, color, (x_min, y_max), (x_max, y_max), 2)  # Bottom horizontal line
+    pygame.draw.line(screen, color, (x_min, y_min+pygame_w/2), (x_min, y_max+pygame_w/2), 2)  # Left vertical line
+    pygame.draw.line(screen, color, (x_max, y_min+pygame_w/2), (x_max, y_max+pygame_w/2), 2)  # Right vertical line
+    pygame.draw.line(screen, color, (x_min, y_min+pygame_h/2), (x_max, y_min+pygame_h/2), 2)  # Top horizontal line
+    pygame.draw.line(screen, color, (x_min, y_max+pygame_h/2), (x_max, y_max+pygame_h/2), 2)  # Bottom horizontal line
 
 def handle_slider_events(event):
     if hasattr(event, 'user_type'):
@@ -121,6 +123,8 @@ steering_scalar_label = pygame_gui.elements.UILabel(
 )
 
 cap = cv2.VideoCapture(0)
+ocv_w= cap.get(3)  # float `width`
+ocv_h = cap.get(4)  # float `height`
 
 ####---------------------- CALIBRATION ---------------------------
 # termination criteria for the iterative algorithm
@@ -206,11 +210,11 @@ while (True):
 
         avgx = int((corners[0][0][0][0]+corners[0][0][1][0]+corners[0][0][2][0]+corners[0][0][3][0])/4)  #use central cordinates from aruco
         avgy = int((corners[0][0][0][1] + corners[0][0][1][1] + corners[0][0][2][1] + corners[0][0][3][1]) / 4) #use central cordinates from aruco
-        normalizedxy = screen_to_normal(avgx,avgy)
-        w, h = pygame.display.get_surface().get_size()
 
-        player.x = nmap(normalizedxy[0],0,1,w,0)
-        player.y = nmap(normalizedxy[1],0,1,0,h)
+        normalizedxy = screen_to_normal(avgx,avgy,ocv_w,ocv_h)
+        player.x = nmap(normalizedxy[0],0.05,.95,pygame_w,0)
+        player.y = nmap(normalizedxy[1],0.05,.95,0,pygame_h)
+        print(player.x, player.y)
         
         #print(avgx,",",avgy)
         #print(tvec[0][0][0]*1000,",",tvec[0][0][1]*1000,",",tvec[0][0][2]*1000)
@@ -227,6 +231,8 @@ while (True):
     else:
         # code to show 'No Ids' when no markers are found
         cv2.putText(frame, "No Ids", (0,64), font, 1, (0,255,0),2,cv2.LINE_AA)
+        player.x = pygame_w/2
+        player.y = pygame_h/2
     for event in pygame.event.get():
     #     if event.type == pygame.QUIT:
     #         running = False
@@ -259,7 +265,7 @@ while (True):
     pagent_x, pagent_y = agent.get_position()[:2]
     arm.set_mode(1)
     arm.set_state(0)
-    arm.set_servo_cartesian([max(float(x_min),float(pagent_x)), pagent_y, xarm_z, 180, 0, 0], speed=5, mvacc=2000)
+    #arm.set_servo_cartesian([max(float(x_min),float(pagent_x)), pagent_y, xarm_z, 180, 0, 0], speed=5, mvacc=2000)
     agent.kp = kp_slider.get_current_value()
     agent.kd = kd_slider.get_current_value()
     agent.steering_scalar = steering_scalar_slider.get_current_value()
