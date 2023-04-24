@@ -25,7 +25,6 @@ joystick = pygame.joystick.Joystick(0)
 joystick.init()
 
 step = 5
-
 while True:
     pygame.event.get()
 
