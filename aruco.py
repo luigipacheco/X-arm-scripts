@@ -26,20 +26,28 @@ from classes import pAgent
 from classes import Player
 
 
+
 arm = XArmAPI("192.168.1.217")
 arm.connect()
 xarm_position = arm.get_position()
 xarm_x = xarm_position[1][0]
 xarm_y = xarm_position[1][1]
 xarm_z = xarm_position[1][2]
+xarm_a = xarm_position[1][3]
+xarm_b = xarm_position[1][4]
+xarm_c = xarm_position[1][5]
 print(xarm_x, xarm_y, xarm_z)
 x_max, x_min, y_max, y_min, z_max, z_min = 700, 205, 400, -400, 400, 10
 code = arm.set_reduced_tcp_boundary([x_max, x_min, y_max, y_min, z_max, z_min])
 
+robot_x =xarm_x
+robot_y =xarm_y
+robot_rx=xarm_b
+
 successes, failures = pygame.init()
 print("Initializing pygame: {0} successes and {1} failures.".format(successes, failures))
 
-screen = pygame.display.set_mode((900, 900))
+screen = pygame.display.set_mode((800, 800))
 pygame_w, pygame_h = pygame.display.get_surface().get_size()
 clock = pygame.time.Clock()
 FPS = 60
@@ -48,8 +56,13 @@ BLACK = (0, 0, 0)
 WHITE = (255, 255, 255)
 RED = (255, 0, 0)
 
-def nmap(x,in_min,in_max,out_min,out_max):
+def nmap(x,in_min,in_max,out_min,out_max, clamp=False):
     out_x = (x-in_min) * (out_max - out_min) / (in_max - in_min) + out_min
+    if clamp:
+        if out_x > out_max:
+            out_x = out_max
+        elif out_x < out_min:
+            out_x = out_min
     return(out_x)
 def screen_to_normal(x,y, width, height):
     # w, h = pygame.display.get_surface().get_size()
@@ -58,13 +71,48 @@ def screen_to_normal(x,y, width, height):
     return(n_x,n_y)
 
 
+
 def draw_boundary_limits(screen, x_min, x_max, y_min, y_max, color=(0, 255, 0)):
     pygame.draw.line(screen, color, (x_min, y_min+pygame_w/2), (x_min, y_max+pygame_w/2), 2)  # Left vertical line
     pygame.draw.line(screen, color, (x_max, y_min+pygame_w/2), (x_max, y_max+pygame_w/2), 2)  # Right vertical line
     pygame.draw.line(screen, color, (x_min, y_min+pygame_h/2), (x_max, y_min+pygame_h/2), 2)  # Top horizontal line
     pygame.draw.line(screen, color, (x_min, y_max+pygame_h/2), (x_max, y_max+pygame_h/2), 2)  # Bottom horizontal line
 
+
+
+
+p_inix = nmap(xarm_x,x_min,x_max,0,pygame_w)
+p_iniy = nmap(xarm_y,y_min,y_max,0,pygame_h)
+player = Player(RED,p_inix,p_iniy)
+# player.x = p_inix
+# player.y = p_iniy
+agent = Agent(0, initial_pos=np.array([p_inix, p_iniy, 0]))
+pagent =pAgent(WHITE)
+manager = pygame_gui.UIManager((720, 480))
+
+play_on = False
+use_pos = False
+use_rot = False
+
+toggle_play = pygame_gui.elements.UIButton(
+    relative_rect=pygame.Rect((10, 100), (150, 30)),
+    text="Play: OFF",
+    manager=manager,
+)
+
+toggle_pos = pygame_gui.elements.UIButton(
+    relative_rect=pygame.Rect((10, 140), (150, 30)),
+    text=" Pos: OFF",
+    manager=manager,
+)
+
+toggle_rot = pygame_gui.elements.UIButton(
+    relative_rect=pygame.Rect((10, 180), (150, 30)),
+    text=" Rot: OFF",
+    manager=manager,
+)
 def handle_slider_events(event):
+    global play_on, use_pos, use_rot
     if hasattr(event, 'user_type'):
         if event.user_type == pygame_gui.UI_HORIZONTAL_SLIDER_MOVED:
             if event.ui_element == kp_slider:
@@ -76,13 +124,16 @@ def handle_slider_events(event):
             elif event.ui_element == steering_scalar_slider:
                 agent.steering_scalar = event.value
                 steering_scalar_label.set_text(f"Steering Scalar: {agent.steering_scalar:.2f}")
-
-
-
-player = Player(RED,xarm_x,xarm_y)
-agent = Agent(0, initial_pos=np.array([xarm_x, xarm_y, 0]))
-pagent =pAgent(WHITE)
-manager = pygame_gui.UIManager((720, 480))
+        elif event.user_type == pygame_gui.UI_BUTTON_PRESSED:
+            if event.ui_element == toggle_play:
+                play_on = not play_on
+                toggle_play.set_text(f" Play: {'ON' if play_on else 'OFF'}")
+            elif event.ui_element == toggle_pos:
+                use_pos = not use_pos
+                toggle_pos.set_text(f" Pos: {'ON' if use_pos else 'OFF'}")
+            elif event.ui_element == toggle_rot:
+                use_rot = not use_rot
+                toggle_rot.set_text(f" Rot: {'ON' if use_rot else 'OFF'}")
 kp_slider = pygame_gui.elements.UIHorizontalSlider(
     relative_rect=pygame.Rect((10, 10), (200, 20)),
     start_value=1.5,
@@ -214,11 +265,19 @@ while (True):
         normalizedxy = screen_to_normal(avgx,avgy,ocv_w,ocv_h)
         player.x = nmap(normalizedxy[0],0.05,.95,pygame_w,0)
         player.y = nmap(normalizedxy[1],0.05,.95,0,pygame_h)
-        print(player.x, player.y)
+        # print(player.x, player.y)
         
         #print(avgx,",",avgy)
         #print(tvec[0][0][0]*1000,",",tvec[0][0][1]*1000,",",tvec[0][0][2]*1000)
-        #print(math.degrees(rvec[0][0][0]),",",math.degrees(rvec[0][0][1]),",",math.degrees(rvec[0][0][2]))
+        if use_rot:
+            robot_rx = math.degrees(rvec[0][0][0])
+            print("marker ",robot_rx)
+            robot_rx = nmap(robot_rx,0,180,0,45,True)
+            if robot_rx < 0:
+                robot_rx = nmap(robot_rx,-0,-180,-0,-45,True)
+            print("out", robot_rx)
+        #print(math.degrees(rvec[0][0][1]))
+        #print(math.degrees(rvec[0][0][2]))
         # code to show ids of the marker found
         #cv2.putText(frame, "pos: " + str(rvec[0][0][0])+str(rvec[0][0][1])+str(rvec[0][0][2]), (avgx,avgy), font, 1, (0,255,0),2,cv2.LINE_AA)
         strg = ''
@@ -231,8 +290,8 @@ while (True):
     else:
         # code to show 'No Ids' when no markers are found
         cv2.putText(frame, "No Ids", (0,64), font, 1, (0,255,0),2,cv2.LINE_AA)
-        player.x = pygame_w/2
-        player.y = pygame_h/2
+        #player.x = pygame_w/2
+        #player.y = pygame_h/2
     for event in pygame.event.get():
     #     if event.type == pygame.QUIT:
     #         running = False
@@ -254,18 +313,23 @@ while (True):
         manager.process_events(event)
 
     # display the resulting frame
+    if play_on:
+        player.update()
+        player_center_x = player.x + player.rect.width/2  - pagent.rect.width/2
+        player_center_y = player.y + player.rect.height/2  - pagent.rect.height/2
+        if use_pos:
+            agent.update(np.array([player_center_x, player_center_y, 0]))
+            pagent.update(agent)
+            pagent_x, pagent_y = agent.get_position()[:2]
+            robot_x = nmap(pagent_x,0,pygame_w,x_min,x_max,clamp=True)
+            robot_y = nmap(pagent_y,0,pygame_h,y_min,y_max,clamp=True)
 
-    player.update()
-    player_center_x = player.x + player.rect.width/2  - pagent.rect.width/2
-    player_center_y = player.y + player.rect.height/2  - pagent.rect.height/2
-
-    agent.update(np.array([player_center_x, player_center_y, 0]))
-    pagent.update(agent)
-
-    pagent_x, pagent_y = agent.get_position()[:2]
-    arm.set_mode(1)
-    arm.set_state(0)
-    #arm.set_servo_cartesian([max(float(x_min),float(pagent_x)), pagent_y, xarm_z, 180, 0, 0], speed=5, mvacc=2000)
+        arm.set_mode(1)
+        arm.set_state(0)
+        arm.set_servo_cartesian([robot_x, robot_y, xarm_z, 180 , robot_rx, 0], speed=5, mvacc=2000)
+        #arm.set_servo_cartesian([max(float(x_min),float(pagent_x)), pagent_y, xarm_z, 180, 0, 0], speed=5, mvacc=2000)
+        # print(robot_x,robot_y)
+        #arm.set_servo_cartesian([max(float(x_min),float(pagent_x)), pagent_y, xarm_z, 180, 0, 0], speed=5, mvacc=2000)
     agent.kp = kp_slider.get_current_value()
     agent.kd = kd_slider.get_current_value()
     agent.steering_scalar = steering_scalar_slider.get_current_value()

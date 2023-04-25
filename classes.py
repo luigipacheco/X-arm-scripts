@@ -131,9 +131,9 @@ class Player(pygame.sprite.Sprite):
         self.image.fill(color)
         self.rect = self.image.get_rect()  # Get rect of some size as 'image'.
         self.velocity = [0, 0]
+        self.rect.move_ip(targetx,targety)
         self.x = self.rect.x
         self.y = self.rect.y
-        self.rect.move_ip(targetx,targety)
 
     def update(self,use_opencv=True):
         if not use_opencv:
