@@ -42,7 +42,10 @@ code = arm.set_reduced_tcp_boundary([x_max, x_min, y_max, y_min, z_max, z_min])
 
 robot_x =xarm_x
 robot_y =xarm_y
-robot_rx=xarm_b
+robot_z =xarm_y
+robot_rx=xarm_a
+robot_ry=xarm_b
+robot_rz=xarm_c
 
 successes, failures = pygame.init()
 print("Initializing pygame: {0} successes and {1} failures.".format(successes, failures))
@@ -220,7 +223,6 @@ ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(objpoints, imgpoints, gray.sh
 while (True):
     dt = clock.tick(FPS) / 1000  # Returns milliseconds between each call to 'tick'. The convert time to seconds.
     screen.fill(BLACK)  # Fill the screen with background color.
-    draw_boundary_limits(screen, x_min, x_max, y_min, y_max)
 
     ret, frame = cap.read()
     #if ret returns false, there is likely a problem with the webcam/camera.
@@ -263,19 +265,23 @@ while (True):
         avgy = int((corners[0][0][0][1] + corners[0][0][1][1] + corners[0][0][2][1] + corners[0][0][3][1]) / 4) #use central cordinates from aruco
 
         normalizedxy = screen_to_normal(avgx,avgy,ocv_w,ocv_h)
-        player.x = nmap(normalizedxy[0],0.05,.95,pygame_w,0)
-        player.y = nmap(normalizedxy[1],0.05,.95,0,pygame_h)
+        player.x = nmap(normalizedxy[1],0.05,.95,pygame_w,0)
+        player.y = nmap(normalizedxy[0],0.05,.95,0,pygame_h)
         # print(player.x, player.y)
         
         #print(avgx,",",avgy)
         #print(tvec[0][0][0]*1000,",",tvec[0][0][1]*1000,",",tvec[0][0][2]*1000)
         if use_rot:
             robot_rx = math.degrees(rvec[0][0][0])
-            print("marker ",robot_rx)
-            robot_rx = nmap(robot_rx,0,180,0,45,True)
-            if robot_rx < 0:
-                robot_rx = nmap(robot_rx,-0,-180,-0,-45,True)
-            print("out", robot_rx)
+            robot_ry = math.degrees(rvec[0][0][2])
+            robot_rz = math.degrees(rvec[0][0][1])
+            screen_msg = f"marker rot: [{round(robot_rx)},{round(robot_ry)},{round(robot_ry)}]"
+            cv2.putText(frame, screen_msg, (0,94), font, 1, (255,255,255),2,cv2.LINE_AA)
+            # if robot_ry < -1:
+            #     robot_ry = nmap(robot_ry,-180,0,335,359,True)
+            # else:
+            #     robot_ry = nmap(robot_ry,0,180,0,45,True)
+            # cv2.putText(frame, "rx: " + str(round(robot_rx)), (0,134), font, 1, (255,255,255),2,cv2.LINE_AA)
         #print(math.degrees(rvec[0][0][1]))
         #print(math.degrees(rvec[0][0][2]))
         # code to show ids of the marker found
@@ -314,6 +320,7 @@ while (True):
 
     # display the resulting frame
     if play_on:
+        screen.fill((0,0,255))
         player.update()
         player_center_x = player.x + player.rect.width/2  - pagent.rect.width/2
         player_center_y = player.y + player.rect.height/2  - pagent.rect.height/2
@@ -326,10 +333,11 @@ while (True):
 
         arm.set_mode(1)
         arm.set_state(0)
-        arm.set_servo_cartesian([robot_x, robot_y, xarm_z, 180 , robot_rx, 0], speed=5, mvacc=2000)
+        arm.set_servo_cartesian([robot_x, robot_y, xarm_z, robot_rx , robot_ry, robot_rz], speed=5, mvacc=2000)
         #arm.set_servo_cartesian([max(float(x_min),float(pagent_x)), pagent_y, xarm_z, 180, 0, 0], speed=5, mvacc=2000)
         # print(robot_x,robot_y)
         #arm.set_servo_cartesian([max(float(x_min),float(pagent_x)), pagent_y, xarm_z, 180, 0, 0], speed=5, mvacc=2000)
+    draw_boundary_limits(screen, x_min, x_max, y_min, y_max)
     agent.kp = kp_slider.get_current_value()
     agent.kd = kd_slider.get_current_value()
     agent.steering_scalar = steering_scalar_slider.get_current_value()
