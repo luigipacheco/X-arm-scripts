@@ -37,12 +37,13 @@ xarm_a = xarm_position[1][3]
 xarm_b = xarm_position[1][4]
 xarm_c = xarm_position[1][5]
 print(xarm_x, xarm_y, xarm_z)
-x_max, x_min, y_max, y_min, z_max, z_min = 700, 205, 400, -400, 400, 10
+x_max, x_min, y_max, y_min, z_max, z_min = 700, 205, 400, -400, 400, 100
 code = arm.set_reduced_tcp_boundary([x_max, x_min, y_max, y_min, z_max, z_min])
 
+#initialize the variables that will eventually be sent to the robot
 robot_x =xarm_x
 robot_y =xarm_y
-robot_z =xarm_y
+robot_z =xarm_z
 robot_rx=xarm_a
 robot_ry=xarm_b
 robot_rz=xarm_c
@@ -89,7 +90,7 @@ p_iniy = nmap(xarm_y,y_min,y_max,0,pygame_h)
 player = Player(RED,p_inix,p_iniy)
 # player.x = p_inix
 # player.y = p_iniy
-agent = Agent(0, initial_pos=np.array([p_inix, p_iniy, 0]))
+agent = Agent(0, initial_pos=np.array([p_inix, p_iniy, xarm_z]))
 pagent =pAgent(WHITE)
 manager = pygame_gui.UIManager((720, 480))
 
@@ -261,15 +262,18 @@ while (True):
         # draw a square around the markers
         aruco.drawDetectedMarkers(frame, corners)
 
-        avgx = int((corners[0][0][0][0]+corners[0][0][1][0]+corners[0][0][2][0]+corners[0][0][3][0])/4)  #use central cordinates from aruco
-        avgy = int((corners[0][0][0][1] + corners[0][0][1][1] + corners[0][0][2][1] + corners[0][0][3][1]) / 4) #use central cordinates from aruco
+        aruco_x = int((corners[0][0][0][0]+corners[0][0][1][0]+corners[0][0][2][0]+corners[0][0][3][0])/4)  #use central cordinates from aruco
+        aruco_y = int((corners[0][0][0][1] + corners[0][0][1][1] + corners[0][0][2][1] + corners[0][0][3][1]) / 4) #use central cordinates from aruco
+        aruco_z = tvec[0][0][2]
+        #print(aruco_z)
 
-        normalizedxy = screen_to_normal(avgx,avgy,ocv_w,ocv_h)
+        normalizedxy = screen_to_normal(aruco_x,aruco_y,ocv_w,ocv_h)
+        player_z= nmap(aruco_z,0,0.5,z_min,z_max)
         player.x = nmap(normalizedxy[1],0.05,.95,pygame_w,0)
         player.y = nmap(normalizedxy[0],0.05,.95,0,pygame_h)
         # print(player.x, player.y)
         
-        #print(avgx,",",avgy)
+        #print(aruco_x,",",aruco_y)
         #print(tvec[0][0][0]*1000,",",tvec[0][0][1]*1000,",",tvec[0][0][2]*1000)
         if use_rot:
             robot_rx = math.degrees(rvec[0][0][0])
@@ -285,7 +289,7 @@ while (True):
         #print(math.degrees(rvec[0][0][1]))
         #print(math.degrees(rvec[0][0][2]))
         # code to show ids of the marker found
-        #cv2.putText(frame, "pos: " + str(rvec[0][0][0])+str(rvec[0][0][1])+str(rvec[0][0][2]), (avgx,avgy), font, 1, (0,255,0),2,cv2.LINE_AA)
+        #cv2.putText(frame, "pos: " + str(rvec[0][0][0])+str(rvec[0][0][1])+str(rvec[0][0][2]), (aruco_x,aruco_y), font, 1, (0,255,0),2,cv2.LINE_AA)
         strg = ''
         for i in range(0, ids.size):
             strg += str(ids[i][0])+', '
@@ -325,15 +329,16 @@ while (True):
         player_center_x = player.x + player.rect.width/2  - pagent.rect.width/2
         player_center_y = player.y + player.rect.height/2  - pagent.rect.height/2
         if use_pos:
-            agent.update(np.array([player_center_x, player_center_y, 0]))
+            agent.update(np.array([player_center_x, player_center_y, player_z]))
             pagent.update(agent)
-            pagent_x, pagent_y = agent.get_position()[:2]
+            pagent_x, pagent_y,robot_z = agent.get_position()[:3]
             robot_x = nmap(pagent_x,0,pygame_w,x_min,x_max,clamp=True)
             robot_y = nmap(pagent_y,0,pygame_h,y_min,y_max,clamp=True)
+            cv2.putText(frame, str(robot_z), (0,240), font, 1, (255,255,255),2,cv2.LINE_AA)
 
         arm.set_mode(1)
         arm.set_state(0)
-        arm.set_servo_cartesian([robot_x, robot_y, xarm_z, robot_rx , robot_ry, robot_rz], speed=5, mvacc=2000)
+        arm.set_servo_cartesian([robot_x, robot_y, robot_z, robot_rx , robot_ry, robot_rz], speed=5, mvacc=2000)
         #arm.set_servo_cartesian([max(float(x_min),float(pagent_x)), pagent_y, xarm_z, 180, 0, 0], speed=5, mvacc=2000)
         # print(robot_x,robot_y)
         #arm.set_servo_cartesian([max(float(x_min),float(pagent_x)), pagent_y, xarm_z, 180, 0, 0], speed=5, mvacc=2000)
