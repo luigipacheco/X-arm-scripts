@@ -31,10 +31,13 @@ while True:
     # Get joystick values
     axis_x = joystick.get_axis(0)
     axis_y = joystick.get_axis(1)
-    b = joystick.get_button(0)
-    a = joystick.get_button(1)
-    reset = joystick.get_button(7)
-    hat = joystick.get_hat(0)
+    b = joystick.get_button(1)
+    a = joystick.get_button(0)
+    reset = joystick.get_button(2)
+    up = joystick.get_button(11)
+    down = joystick.get_button(12)
+    right = joystick.get_button(14)
+    left = joystick.get_button(13)
 
     # Jog the xArm
     if b:   #jog on XY plane
@@ -69,7 +72,7 @@ while True:
         arm.set_position(*[200, 0, 200, 180, 0, 0], wait=True)
         time.sleep(1)
     # move Z
-    if hat[1]>0:
+    if up:
         print("up")
         arm.set_mode(1)
         arm.set_state(0)
@@ -79,7 +82,7 @@ while True:
         mvpose = [pos[1][0], pos[1][1], pos[1][2], pos[1][3], pos[1][4], pos[1][5]]
         ret = arm.set_servo_cartesian(mvpose, speed=100, mvacc=2000)
         time.sleep(0.01)
-    if hat[1]<0:
+    if down:
         print("up")
         arm.set_mode(1)
         arm.set_state(0)
@@ -91,7 +94,7 @@ while True:
         time.sleep(0.01)
 
     #jaw
-    if hat[0]>0:
+    if right:
         print("jaw+")
         arm.set_mode(1)
         arm.set_state(0)
@@ -101,7 +104,7 @@ while True:
         mvpose = [pos[1][0], pos[1][1], pos[1][2], pos[1][3], pos[1][4], pos[1][5]]
         ret = arm.set_servo_cartesian(mvpose, speed=100, mvacc=2000)
         time.sleep(0.01)
-    if hat[0]<0:
+    if left:
         print("jaw-")
         arm.set_mode(1)
         arm.set_state(0)

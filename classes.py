@@ -134,8 +134,14 @@ class Player(pygame.sprite.Sprite):
         self.rect.move_ip(targetx,targety)
         self.x = self.rect.x
         self.y = self.rect.y
+        self.color = color
+    def change_color(self, color):
+        self.image = pygame.Surface((32, 32))
+        self.image.fill(color)
+        self.color = color
 
     def update(self,use_opencv=True):
+        self.change_color(self.color)
         if not use_opencv:
             self.rect.move_ip(*self.velocity)
             self.x = self.rect.x

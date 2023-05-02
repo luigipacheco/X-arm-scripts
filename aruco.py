@@ -12,7 +12,7 @@ __status__ = "Alpha"
 Description: Aruco movement for xarm
 """
 
-
+import time
 import numpy as np
 import cv2
 import cv2.aruco as aruco
@@ -24,6 +24,8 @@ import pygame_gui
 from classes import Agent
 from classes import pAgent
 from classes import Player
+from oneefilter import OneEuroFilter
+from oneefilter import LowPassFilter
 
 
 
@@ -47,6 +49,12 @@ robot_z =xarm_z
 robot_rx=xarm_a
 robot_ry=xarm_b
 robot_rz=xarm_c
+aruco_rx = 0
+aruco_ry = 0
+aruco_rz = 0
+filtered_rx = xarm_a
+filtered_ry = xarm_b
+filtered_rz = xarm_c
 
 successes, failures = pygame.init()
 print("Initializing pygame: {0} successes and {1} failures.".format(successes, failures))
@@ -57,8 +65,19 @@ clock = pygame.time.Clock()
 FPS = 60
 step = 5
 BLACK = (0, 0, 0)
+GRAY = (150, 150, 150)
 WHITE = (255, 255, 255)
 RED = (255, 0, 0)
+
+config = {
+        'freq': 120,       # Hz
+        'mincutoff': .2,  # FIXME
+        'beta': 0.01,       # FIXME
+        'dcutoff': 1.0     # this one should be ok
+        }
+filter_rx=OneEuroFilter(**config)
+filter_ry=OneEuroFilter(**config)
+filter_rz=OneEuroFilter(**config)
 
 def nmap(x,in_min,in_max,out_min,out_max, clamp=False):
     out_x = (x-in_min) * (out_max - out_min) / (in_max - in_min) + out_min
@@ -87,7 +106,7 @@ def draw_boundary_limits(screen, x_min, x_max, y_min, y_max, color=(0, 255, 0)):
 
 p_inix = nmap(xarm_x,x_min,x_max,0,pygame_w)
 p_iniy = nmap(xarm_y,y_min,y_max,0,pygame_h)
-player = Player(RED,p_inix,p_iniy)
+player = Player(GRAY,p_inix,p_iniy)
 # player.x = p_inix
 # player.y = p_iniy
 agent = Agent(0, initial_pos=np.array([p_inix, p_iniy, xarm_z]))
@@ -250,7 +269,7 @@ while (True):
     # check if the ids list is not empty
     # if no check is added the code will crash
     if np.all(ids != None):
-
+        player.color=RED 
         # estimate pose of each marker and return the values
         # rvet and tvec-different from camera coefficients
         rvec, tvec ,_ = aruco.estimatePoseSingleMarkers(corners, 0.05, mtx, dist)
@@ -276,11 +295,27 @@ while (True):
         #print(aruco_x,",",aruco_y)
         #print(tvec[0][0][0]*1000,",",tvec[0][0][1]*1000,",",tvec[0][0][2]*1000)
         if use_rot:
-            robot_rx = math.degrees(rvec[0][0][0])
-            robot_ry = math.degrees(rvec[0][0][2])
-            robot_rz = math.degrees(rvec[0][0][1])
-            screen_msg = f"marker rot: [{round(robot_rx)},{round(robot_ry)},{round(robot_ry)}]"
-            cv2.putText(frame, screen_msg, (0,94), font, 1, (255,255,255),2,cv2.LINE_AA)
+            aruco_rx = math.degrees(rvec[0][0][0])
+            if aruco_rx < 0 :
+                aruco_rx = (180+aruco_rx)*-1
+            else:
+                aruco_rx = 180-aruco_rx         
+            aruco_ry = math.degrees(rvec[0][0][1])
+            aruco_rz = math.degrees(rvec[0][0][2])
+            ts = time.time()
+            filtered_rx = filter_rx(aruco_rx,ts)
+            filtered_ry = filter_ry(aruco_ry,ts)
+            filtered_rz = filter_rz(aruco_rz,ts)
+
+            robot_rx = nmap(filtered_rz,180,-180,0,360,True)
+            robot_ry = filtered_rx
+            robot_rz = filtered_ry
+            #filtered_rx = F(robot_ry)
+            #filtered_rx = F(robot_rz)
+            print(aruco_rx , filtered_rx)
+
+            screen_msg = f"marker rot: [{round(robot_rx)},{round(robot_ry)},{round(robot_rz)}]"
+            cv2.putText(frame, screen_msg, (0,94), font, 1, (255,0,0),2,cv2.LINE_AA)
             # if robot_ry < -1:
             #     robot_ry = nmap(robot_ry,-180,0,335,359,True)
             # else:
@@ -299,9 +334,11 @@ while (True):
 
     else:
         # code to show 'No Ids' when no markers are found
+        player.color = GRAY
         cv2.putText(frame, "No Ids", (0,64), font, 1, (0,255,0),2,cv2.LINE_AA)
         #player.x = pygame_w/2
         #player.y = pygame_h/2
+   #print(player.color)
     for event in pygame.event.get():
     #     if event.type == pygame.QUIT:
     #         running = False
