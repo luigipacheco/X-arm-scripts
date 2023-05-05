@@ -39,7 +39,7 @@ xarm_a = xarm_position[1][3]
 xarm_b = xarm_position[1][4]
 xarm_c = xarm_position[1][5]
 print(xarm_x, xarm_y, xarm_z)
-x_max, x_min, y_max, y_min, z_max, z_min = 700, 205, 400, -400, 400, 100
+x_max, x_min, y_max, y_min, z_max, z_min = 600, 205, 300, -300, 600, 100
 code = arm.set_reduced_tcp_boundary([x_max, x_min, y_max, y_min, z_max, z_min])
 
 #initialize the variables that will eventually be sent to the robot
@@ -75,9 +75,15 @@ config = {
         'beta': 0.01,       # FIXME
         'dcutoff': 1.0     # this one should be ok
         }
+configz = {
+        'freq': 120,       # Hz
+        'mincutoff': .1,  # FIXME
+        'beta': 0.005,       # FIXME
+        'dcutoff': 1.0     # this one should be ok
+        }
 filter_rx=OneEuroFilter(**config)
 filter_ry=OneEuroFilter(**config)
-filter_rz=OneEuroFilter(**config)
+filter_rz=OneEuroFilter(**configz)
 
 def nmap(x,in_min,in_max,out_min,out_max, clamp=False):
     out_x = (x-in_min) * (out_max - out_min) / (in_max - in_min) + out_min
@@ -303,16 +309,20 @@ while (True):
             aruco_ry = math.degrees(rvec[0][0][1])
             aruco_rz = math.degrees(rvec[0][0][2])
             ts = time.time()
+            if aruco_rx > 0 : 
+                aruco_rz = aruco_rz*-1
+
             filtered_rx = filter_rx(aruco_rx,ts)
             filtered_ry = filter_ry(aruco_ry,ts)
             filtered_rz = filter_rz(aruco_rz,ts)
 
             robot_rx = nmap(filtered_rz,180,-180,0,360,True)
-            robot_ry = filtered_rx
-            robot_rz = filtered_ry
+            robot_ry = -filtered_rx
+            #robot_rz = filtered_ry
+
             #filtered_rx = F(robot_ry)
             #filtered_rx = F(robot_rz)
-            print(aruco_rx , filtered_rx)
+            #print(aruco_rx , filtered_rx)
 
             screen_msg = f"marker rot: [{round(robot_rx)},{round(robot_ry)},{round(robot_rz)}]"
             cv2.putText(frame, screen_msg, (0,94), font, 1, (255,0,0),2,cv2.LINE_AA)
@@ -371,6 +381,7 @@ while (True):
             pagent_x, pagent_y,robot_z = agent.get_position()[:3]
             robot_x = nmap(pagent_x,0,pygame_w,x_min,x_max,clamp=True)
             robot_y = nmap(pagent_y,0,pygame_h,y_min,y_max,clamp=True)
+            robot_z = nmap(robot_z,z_min,z_max,z_min,z_max,clamp=True)
             cv2.putText(frame, str(robot_z), (0,240), font, 1, (255,255,255),2,cv2.LINE_AA)
 
         arm.set_mode(1)
