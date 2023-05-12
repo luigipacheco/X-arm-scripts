@@ -166,21 +166,21 @@ def handle_slider_events(event):
 kp_slider = pygame_gui.elements.UIHorizontalSlider(
     relative_rect=pygame.Rect((10, 10), (200, 20)),
     start_value=1.5,
-    value_range=(0.0, 5.0),
+    value_range=(0.0, 15.0),
     manager=manager,
 )
 
 kd_slider = pygame_gui.elements.UIHorizontalSlider(
     relative_rect=pygame.Rect((10, 40), (200, 20)),
     start_value=2.0,
-    value_range=(0.0, 5.0),
+    value_range=(0.0, 15.0),
     manager=manager,
 )
 
 steering_scalar_slider = pygame_gui.elements.UIHorizontalSlider(
     relative_rect=pygame.Rect((10, 70), (200, 20)),
     start_value=0.5,
-    value_range=(0.0, 5.0),
+    value_range=(0.0, 15.0),
     manager=manager,
 )
 
@@ -202,7 +202,7 @@ steering_scalar_label = pygame_gui.elements.UILabel(
     manager=manager,
 )
 
-cap = cv2.VideoCapture(0)
+cap = cv2.VideoCapture(2)
 ocv_w= cap.get(3)  # float `width`
 ocv_h = cap.get(4)  # float `height`
 
