@@ -1,68 +1,202 @@
-// Adafruit_NeoMatrix example for single NeoPixel Shield.
-// Scrolls 'Howdy' across the matrix in a portrait (vertical) orientation.
+/**
+* esp32_osc_neopixel_matrix_controller.ino
+*
+* Changes a Neopixel matrix based on incoming
+* OSC values.
+*
+* Madeline Gannon | ATONATON
+* Includes changes by Luis Pacheco
+* April 2023
+* https://atonaton.com
+*/
 
-#include <Adafruit_GFX.h>
-#include <Adafruit_NeoMatrix.h>
+#include "WiFi.h"
+#include <WiFiUdp.h>
+#include <OSCMessage.h>
+#include <OSCBundle.h>
 #include <Adafruit_NeoPixel.h>
-#ifndef PSTR
- #define PSTR // Make Arduino Due happy
+
+#define LED_PIN 32
+#define LED_COUNT 32
+
+// #define HOME_NETWORK
+
+Adafruit_NeoPixel pixels(LED_COUNT, LED_PIN, NEO_GRB + NEO_KHZ800);
+
+WiFiUDP udp;
+int port = 55555;
+
+// const char* ssid = "WHH";
+// const char* password = "benderisgreat";
+// Set your Static IP address
+// IPAddress static_IP(192, 168, 1, 10);
+// IPAddress gateway(192, 168, 1, 1);
+// IPAddress subnet(255, 255, 255, 0);
+
+// home network 192.168.0.23
+#ifdef HOME_NETWORK
+const char* ssid = "NETGEAR94";
+const char* password = "wideprairie401";
+IPAddress static_IP(192, 168, 0, 10);
+IPAddress gateway(192, 168, 0, 1);
+IPAddress subnet(255, 255, 255, 0);
+#else
+const char* ssid = "WHH";
+const char* password = "benderisgreat";
+// Set your Static IP address
+IPAddress static_IP(192, 168, 1, 10);
+IPAddress gateway(192, 168, 1, 1);
+IPAddress subnet(255, 255, 255, 0);
 #endif
 
-#define PIN 32
-
-// MATRIX DECLARATION:
-// Parameter 1 = width of NeoPixel matrix
-// Parameter 2 = height of matrix
-// Parameter 3 = pin number (most are valid)
-// Parameter 4 = matrix layout flags, add together as needed:
-//   NEO_MATRIX_TOP, NEO_MATRIX_BOTTOM, NEO_MATRIX_LEFT, NEO_MATRIX_RIGHT:
-//     Position of the FIRST LED in the matrix; pick two, e.g.
-//     NEO_MATRIX_TOP + NEO_MATRIX_LEFT for the top-left corner.
-//   NEO_MATRIX_ROWS, NEO_MATRIX_COLUMNS: LEDs are arranged in horizontal
-//     rows or in vertical columns, respectively; pick one or the other.
-//   NEO_MATRIX_PROGRESSIVE, NEO_MATRIX_ZIGZAG: all rows/columns proceed
-//     in the same order, or alternate lines reverse direction; pick one.
-//   See example below for these values in action.
-// Parameter 5 = pixel type flags, add together as needed:
-//   NEO_KHZ800  800 KHz bitstream (most NeoPixel products w/WS2812 LEDs)
-//   NEO_KHZ400  400 KHz (classic 'v1' (not v2) FLORA pixels, WS2811 drivers)
-//   NEO_GRB     Pixels are wired for GRB bitstream (most NeoPixel products)
-//   NEO_GRBW    Pixels are wired for GRBW bitstream (RGB+W NeoPixel products)
-//   NEO_RGB     Pixels are wired for RGB bitstream (v1 FLORA pixels, not v2)
-
-
-// Example for NeoPixel Shield.  In this application we'd like to use it
-// as a 5x8 tall matrix, with the USB port positioned at the top of the
-// Arduino.  When held that way, the first pixel is at the top right, and
-// lines are arranged in columns, progressive order.  The shield uses
-// 800 KHz (v2) pixels that expect GRB color data.
-Adafruit_NeoMatrix matrix = Adafruit_NeoMatrix(4, 8, PIN,
-  NEO_MATRIX_TOP     + NEO_MATRIX_RIGHT +
-  NEO_MATRIX_COLUMNS + NEO_MATRIX_PROGRESSIVE,
-  NEO_GRB            + NEO_KHZ800);
-
-const uint16_t colors[] = {
-  matrix.Color(255, 0, 0), matrix.Color(0, 255, 0), matrix.Color(0, 0, 255) };
-
 void setup() {
-  matrix.begin();
-  matrix.setTextWrap(false);
-  matrix.setBrightness(40);
-  matrix.setTextColor(colors[0]);
+  Serial.begin(115200);
+
+  // Configure a Static Address
+  if (!WiFi.config(static_IP, gateway, subnet)) {
+    Serial.println("STA Failed to configure");
+  }
+
+  // Connect to the wifi router's network
+  WiFi.begin(ssid, password);
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(1000);
+    Serial.println("Connecting to WiFi..");
+  }
+
+  // Confirm the Static Address
+  Serial.print("ESP32_0 IP Address: ");
+  Serial.println(WiFi.localIP());
+
+  // Begin listening on the UDP port
+  udp.begin(port);
+
+  // Intialize Neopixel Matrix
+  pixels.begin();
+  pixels.show();
+  pixels.setBrightness(50);
 }
 
-int x    = matrix.width();
-int pass = 0;
-
 void loop() {
-  matrix.fillScreen(0);
-  matrix.setCursor(x, 0);
-  matrix.print(F("Howdy"));
-  if(--x < -36) {
-    x = matrix.width();
-    if(++pass >= 3) pass = 0;
-    matrix.setTextColor(colors[pass]);
+  check_for_OSC_message();
+  delay(5);
+}
+
+void on_message_draw(OSCMessage& msg) {
+  if (msg.isString(0)) {
+    pixels.clear();
+    pixels.show();
+  } else {
+    int pixel_data_size = msg.size();
+    for (int i = 0; i < pixel_data_size; i += 5) {  // we increment by 5 as each pixel has 5 values
+      int pixel = msg.getInt(i);
+      int r = msg.getInt(i + 1);
+      int g = msg.getInt(i + 2);
+      int b = msg.getInt(i + 3);
+      int w = msg.getInt(i + 4);
+      uint32_t color = pixels.Color(r, g, b, w);
+      pixels.setPixelColor(pixel, color);
+    }
+    pixels.show();
   }
-  matrix.show();
-  delay(100);
+}
+
+void on_message_fill(OSCMessage& msg) {
+  if (!msg.isString(0)) {
+    int r = msg.getInt(0);
+    int g = msg.getInt(1);
+    int b = msg.getInt(2);
+    int w = msg.getInt(3);
+    uint32_t color = pixels.Color(r, g, b, w);
+    for (int i = 0; i < LED_COUNT; i++) {
+      pixels.setPixelColor(i, color);
+    }
+    pixels.show();
+  }
+}
+
+void on_message_clear(OSCMessage& msg) {
+  pixels.clear();
+  pixels.show();
+}
+
+void on_message_gh(OSCMessage& msg) {
+  if (msg.isString(0)) {
+    char my_string[255];
+    msg.getString(0, my_string);
+
+    // Split the string into RGB components
+    String str = String(my_string);
+    int idx1 = str.indexOf(",");
+    int idx2 = str.lastIndexOf(",");
+    int r = str.substring(0, idx1).toInt();
+    int g = str.substring(idx1+1, idx2).toInt();
+    int b = str.substring(idx2+1).toInt();
+
+    uint32_t color = pixels.Color(r, g, b);
+
+    for (int i = 0; i < LED_COUNT; i++) {
+      pixels.setPixelColor(i, color);
+    }
+    pixels.show();
+
+    // Print the values for debugging
+    Serial.println("Received RGB values: ");
+    Serial.println(r);
+    Serial.println(g);
+    Serial.println(b);
+  }
+}
+
+void check_for_OSC_message() {
+  OSCMessage msg;
+  int size = udp.parsePacket();
+  if (size > 0) {
+    while (size--) {
+      msg.fill(udp.read());
+    }
+    if (!msg.hasError()) {
+      // Get the message address
+      char msg_addr[255];
+      msg.getAddress(msg_addr);
+      Serial.print("MSG_ADDR: ");
+      Serial.println(msg_addr);
+      String msg_addr_str = String(msg_addr);
+
+      // if "/address" is in msg_addr
+      if (msg_addr_str.indexOf("/draw") != -1) {
+        on_message_draw(msg);
+      } else if(msg_addr_str.indexOf("/fill") != -1) {
+        on_message_fill(msg);
+      } else if(msg_addr_str.indexOf("/clear") != -1) {
+        on_message_clear(msg);
+      }
+      else if(msg_addr_str.indexOf("/0/GH") != -1) {
+        on_message_gh(msg);
+      }
+      
+
+      // Example of how to parse the message
+      for (int i = 0; i < msg.size(); i++) {
+        Serial.print("\tVALUE\t");
+        Serial.print(msg.getType(i));
+        Serial.print(": ");
+        if (msg.isInt(i)) {
+          Serial.println(msg.getInt(i));
+        } else if (msg.isFloat(i)) {
+          Serial.println(msg.getFloat(i));
+        } else if (msg.isDouble(i)) {
+          Serial.println(msg.getDouble(i));
+        } else if (msg.isString(i)) {
+          char my_string[255];
+          msg.getString(i, my_string);
+          Serial.println(my_string);
+        } else if (msg.isBoolean(i)) {
+          Serial.println(msg.getBoolean(i));
+        } else {
+          Serial.println("Unknown data type.");
+        }
+      }
+    }
+  }
 }
