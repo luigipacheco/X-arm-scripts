@@ -202,7 +202,7 @@ steering_scalar_label = pygame_gui.elements.UILabel(
     manager=manager,
 )
 
-cap = cv2.VideoCapture(2)
+cap = cv2.VideoCapture()
 ocv_w= cap.get(3)  # float `width`
 ocv_h = cap.get(4)  # float `height`
 

@@ -13,6 +13,7 @@ Experiments for Ufactory Xarm Robot
 - install `python` libraries
     -   pip install pygame
     -   pip install opencv-python==3.4.18.65
+    -   pip install opencv-contrib-python==4.6.0.66
     -   pip install pygame_gui
 
     ```code here
