@@ -1,14 +1,3 @@
-__author__ = "Luis Pacheco"
-__copyright__ = "Copyright 2023, Luis Pacheco"
-__contributors__ = ""
-__license__ = "GPL"
-__version__ = "0.0.1"
-__maintainer__ = "Luis Pacheco"
-__email__ = "luigi@luigipacheco.com"
-__status__ = "Alpha"
-"""
-Pygame Joystick control for U-factory  X-arm
-"""
 import pygame
 from xarm.wrapper import XArmAPI
 import time
@@ -19,7 +8,7 @@ pygame.joystick.init()
 # Initialize xArm
 arm = XArmAPI("192.168.1.217")
 arm.connect()
-x_max, x_min, y_max, y_min, z_max, z_min = 700, 150, 400, -400, 500, 50
+x_max, x_min, y_max, y_min, z_max, z_min = 700, 165, 400, -400, 200, 130
 arm.set_reduced_tcp_boundary([x_max, x_min, y_max, y_min, z_max, z_min])
 
 # Get the first joystick
@@ -78,7 +67,11 @@ while True:
         print(pos)
         pos[1][0] -= axis_y * step
         pos[1][1] -= axis_x * step
-        mvpose = [pos[1][0], pos[1][1], pos[1][2], pos[1][3], pos[1][4], pos[1][5]]
+        if toggle:
+            mvpose = [pos[1][0], pos[1][1], 140, pos[1][3], pos[1][4], pos[1][5]]
+        else:
+            mvpose = [pos[1][0], pos[1][1], 150, pos[1][3], pos[1][4], pos[1][5]]
+
         ret = arm.set_servo_cartesian(mvpose, speed=50, mvacc=1000)
         time.sleep(0.01)
 
