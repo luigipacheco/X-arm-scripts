@@ -24,7 +24,7 @@ arm.connect()
 
 
 # Set the offsets and boundaries for the xArm
-x_offset, y_offset, z_offset = 0, 0, 0
+x_offset, y_offset, z_offset = 62, 186, -9
 x_max, x_min, y_max, y_min, z_max, z_min = 700, 150, 400, -400, 500, 50
 arm.set_tcp_offset([x_offset,y_offset,z_offset,0,0,0])
 arm.set_reduced_tcp_boundary([x_max, x_min, y_max, y_min, z_max, z_min])
