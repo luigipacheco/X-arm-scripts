@@ -13,6 +13,11 @@ This script is used to control a U-factory X-arm with a joystick using the pygam
 import pygame
 from xarm.wrapper import XArmAPI
 import time
+import argparse
+import random
+
+
+from pythonosc import udp_client
 
 # Initialize pygame and joystick
 pygame.init()
@@ -21,6 +26,18 @@ pygame.joystick.init()
 # Connect to the xArm at the given IP address
 arm = XArmAPI("192.168.1.217")
 arm.connect()
+
+#start osc 
+parser = argparse.ArgumentParser()
+parser.add_argument("--ip", default="192.168.1.10",
+    help="The ip of the OSC server")
+parser.add_argument("--port", type=int, default=55555,
+    help="The port the OSC server is listening on")
+args = parser.parse_args()
+
+client = udp_client.SimpleUDPClient(args.ip, args.port)
+
+start_time = time.time()
 
 
 # Set the offsets and boundaries for the xArm
@@ -49,11 +66,15 @@ while True:
             if event.button == 5:
                 toggle = True
                 print("Toggle ", toggle)
+                pixel_data_fill = [255, 0, 0, 0]  # replace this with your actual pixel data
+                client.send_message("/fill", pixel_data_fill)
 
         if event.type == pygame.JOYBUTTONUP:
             if event.button == 5:
                 toggle = False
                 print("Toggle ", toggle)
+                pixel_data_fill = [0, 0, 0, 0]  # replace this with your actual pixel data
+                client.send_message("/fill", pixel_data_fill)
         
         if event.type == pygame.JOYBUTTONDOWN:
             if event.button == 0:
@@ -116,6 +137,10 @@ while True:
         #arm.reset(wait=True)
         arm.set_position(*[200, 0, 160, 180, 0, 0], wait=True)
         time.sleep(1)
+    
+    if x:  # Handle reset of the xArm
+        print("x")
+
     
     if up or hat[1]>0: # Handle vertical movement
         print("up")

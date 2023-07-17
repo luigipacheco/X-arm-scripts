@@ -52,5 +52,5 @@ if __name__ == "__main__":
 
     # wait before updating position
     time.sleep(0.1) """
-pixel_data_fill = [255, 0, 0, 0]  # replace this with your actual pixel data
+pixel_data_fill = [0, 0, 0, 0]  # replace this with your actual pixel data
 client.send_message("/fill", pixel_data_fill)
