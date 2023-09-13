@@ -32,7 +32,7 @@ arm.connect()
 
 #start osc 
 parser = argparse.ArgumentParser()
-parser.add_argument("--ip", default="192.168.1.10",
+parser.add_argument("--ip", default="192.168.50.10",
     help="The ip of the OSC server")
 parser.add_argument("--port", type=int, default=55555,
     help="The port the OSC server is listening on")
@@ -68,13 +68,13 @@ while True:
         if event.type == pygame.JOYBUTTONDOWN:
             if event.button == 5:
                 toggle = True
-                print("Toggle ", toggle)
+                print("Toggle gripper", toggle)
                 client.send_message("/grip", [0,0,0,0,0])
 
         if event.type == pygame.JOYBUTTONUP:
             if event.button == 5:
                 toggle = False
-                print("Toggle ", toggle)
+                print("Toggle gripper ", toggle)
                 client.send_message("/ungrip", [0,0,0,0,0])
         
         if event.type == pygame.JOYBUTTONDOWN:
