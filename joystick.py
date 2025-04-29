@@ -17,6 +17,7 @@ import argparse
 import random
 
 
+speed = 200 
 from pythonosc import udp_client
 
 # Initialize pygame and joystick
@@ -24,7 +25,7 @@ pygame.init()
 pygame.joystick.init()
 
 # Connect to the xArm at the given IP address
-arm = XArmAPI("192.168.1.217")
+arm = XArmAPI("192.168.1.240")
 arm.connect()
 
 #start osc 
@@ -115,7 +116,7 @@ while True:
         pos[1][0] -= axis_y * step
         pos[1][1] -= axis_x * step
         mvpose = [pos[1][0], pos[1][1], pos[1][2], pos[1][3], pos[1][4], pos[1][5]]
-        ret = arm.set_servo_cartesian(mvpose, speed=50, mvacc=1000)
+        ret = arm.set_servo_cartesian(mvpose, speed=speed, mvacc=1000)
         time.sleep(0.01)
 
     if a: # Handle jogging on Roll and Pitch
@@ -127,7 +128,7 @@ while True:
         pos[1][3] += axis_x * step/10
         pos[1][4] -= axis_y * step/10
         mvpose = [pos[1][0], pos[1][1], pos[1][2], pos[1][3], pos[1][4], pos[1][5]]
-        ret = arm.set_servo_cartesian(mvpose, speed=100, mvacc=2000)
+        ret = arm.set_servo_cartesian(mvpose, speed=speed, mvacc=2000)
     
     if reset:  # Handle reset of the xArm
         print("reset")
@@ -150,7 +151,7 @@ while True:
         print(pos)
         pos[1][2] += step*0.5
         mvpose = [pos[1][0], pos[1][1], pos[1][2], pos[1][3], pos[1][4], pos[1][5]]
-        ret = arm.set_servo_cartesian(mvpose, speed=100, mvacc=2000)
+        ret = arm.set_servo_cartesian(mvpose, speed=speed, mvacc=2000)
         time.sleep(0.01)
     if down or hat[1]<0:
         print("down")
@@ -160,7 +161,7 @@ while True:
         print(pos)
         pos[1][2] -= step*0.5
         mvpose = [pos[1][0], pos[1][1], pos[1][2], pos[1][3], pos[1][4], pos[1][5]]
-        ret = arm.set_servo_cartesian(mvpose, speed=100, mvacc=2000)
+        ret = arm.set_servo_cartesian(mvpose, speed=speed, mvacc=2000)
         time.sleep(0.01)
 
     if right or hat[0]>0: # Handle jaw movement
@@ -171,7 +172,7 @@ while True:
         print(pos)
         pos[1][5] += step*0.1
         mvpose = [pos[1][0], pos[1][1], pos[1][2], pos[1][3], pos[1][4], pos[1][5]]
-        ret = arm.set_servo_cartesian(mvpose, speed=100, mvacc=2000)
+        ret = arm.set_servo_cartesian(mvpose, speed=speed, mvacc=2000)
         time.sleep(0.01)
     if left or hat[0]<0:
         print("jaw-")
@@ -181,7 +182,7 @@ while True:
         print(pos)
         pos[1][5] -= step*0.1
         mvpose = [pos[1][0], pos[1][1], pos[1][2], pos[1][3], pos[1][4], pos[1][5]]
-        ret = arm.set_servo_cartesian(mvpose, speed=100, mvacc=2000)
+        ret = arm.set_servo_cartesian(mvpose, speed=speed, mvacc=2000)
         time.sleep(0.01)
 
 

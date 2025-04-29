@@ -16,7 +16,7 @@ from classes import Agent
 from classes import pAgent
 from classes import Player
 
-arm = XArmAPI("192.168.1.217")
+arm = XArmAPI("192.168.1.240")
 arm.connect()
 xarm_position = arm.get_position()
 xarm_x = xarm_position[1][0]
@@ -114,102 +114,23 @@ while running:
     reset = joystick.get_button(7)
     hat = joystick.get_hat(0)
 
-#    if b:   #jog on XY plane
-#        arm.set_mode(1)
-#        arm.set_state(0)
-#        print("xy")
-#        pos = list(arm.get_position())
-#        print(pos)
-#        pos[1][0] -= axis_y * step
-#        pos[1][1] -= axis_x * step
-#       mvpose = [pos[1][0], pos[1][1], pos[1][2], pos[1][3], pos[1][4], pos[1][5]]
-#        ret = arm.set_servo_cartesian(mvpose, speed=100, mvacc=2000)
-#        time.sleep(0.01)
+    # Debug prints
+    print(f"Joystick values - X: {axis_x:.2f}, Y: {axis_y:.2f}, B button: {b}")
+    print(f"Player velocity - X: {player.velocity[0]:.2f}, Y: {player.velocity[1]:.2f}")
+
     if b:   #jog on XY plane
         player.velocity[0] = axis_x * 200 * dt
         player.velocity[1] = axis_y * 200 * dt
+        print(f"Moving player - New velocity X: {player.velocity[0]:.2f}, Y: {player.velocity[1]:.2f}")
+    else:
+        player.velocity[0] = 0
+        player.velocity[1] = 0
 
-    # if a: #jog on Roll and Pitch
-    #     arm.set_mode(1)
-    #     arm.set_state(0)
-    #     print("roll pitch")
-    #     pos = list(arm.get_position())
-    #     print(pos)
-    #     pos[1][3] += axis_x * step/10
-    #     pos[1][4] -= axis_y * step/10
-    #     mvpose = [pos[1][0], pos[1][1], pos[1][2], pos[1][3], pos[1][4], pos[1][5]]
-    #     ret = arm.set_servo_cartesian(mvpose, speed=100, mvacc=2000)
-    # #reset the robot
-    # if reset:
-    #     print("reset")
-    #     arm.motion_enable(enable=True)
-    #     arm.set_mode(0)
-    #     arm.set_state(state=0)
-    #     arm.reset(wait=True)
-    #     arm.set_position(*[200, 0, 200, 180, 0, 0], wait=True)
-    #     time.sleep(1)
-    # # move Z
-    # if hat[1]>0:
-    #     print("up")
-    #     arm.set_mode(1)
-    #     arm.set_state(0)
-    #     pos = list(arm.get_position())
-    #     print(pos)
-    #     pos[1][2] += step*0.5
-    #     mvpose = [pos[1][0], pos[1][1], pos[1][2], pos[1][3], pos[1][4], pos[1][5]]
-    #     ret = arm.set_servo_cartesian(mvpose, speed=100, mvacc=2000)
-    #     time.sleep(0.01)
-    # if hat[1]<0:
-    #     print("up")
-    #     arm.set_mode(1)
-    #     arm.set_state(0)
-    #     pos = list(arm.get_position())
-    #     print(pos)
-    #     pos[1][2] -= step*0.5
-    #     mvpose = [pos[1][0], pos[1][1], pos[1][2], pos[1][3], pos[1][4], pos[1][5]]
-    #     ret = arm.set_servo_cartesian(mvpose, speed=100, mvacc=2000)
-    #     time.sleep(0.01)
-
-    # #jaw
-    # if hat[0]>0:
-    #     print("jaw+")
-    #     arm.set_mode(1)
-    #     arm.set_state(0)
-    #     pos = list(arm.get_position())
-    #     print(pos)
-    #     pos[1][5] += step*0.1
-    #     mvpose = [pos[1][0], pos[1][1], pos[1][2], pos[1][3], pos[1][4], pos[1][5]]
-    #     ret = arm.set_servo_cartesian(mvpose, speed=100, mvacc=2000)
-    #     time.sleep(0.01)
-    # if hat[0]<0:
-    #     print("jaw-")
-    #     arm.set_mode(1)
-    #     arm.set_state(0)
-    #     pos = list(arm.get_position())
-    #     print(pos)
-    #     pos[1][5] -= step*0.1
-    #     mvpose = [pos[1][0], pos[1][1], pos[1][2], pos[1][3], pos[1][4], pos[1][5]]
-    #     ret = arm.set_servo_cartesian(mvpose, speed=100, mvacc=2000)
-    #     time.sleep(0.01)
-    # for event in pygame.event.get():
-    #     if event.type == pygame.QUIT:
-    #         running = False
-    #     elif event.type == pygame.KEYDOWN:
-    #         if event.key == pygame.K_w:
-    #             player.velocity[1] = -200 * dt  # 200 pixels per second
-    #         elif event.key == pygame.K_s:
-    #             player.velocity[1] = 200 * dt
-    #         elif event.key == pygame.K_a:
-    #             player.velocity[0] = -200 * dt
-    #         elif event.key == pygame.K_d:
-    #             player.velocity[0] = 200 * dt
-    #     elif event.type == pygame.KEYUP:
-    #         if event.key == pygame.K_w or event.key == pygame.K_s:
-    #             player.velocity[1] = 0
-    #         elif event.key == pygame.K_a or event.key == pygame.K_d:
-    #             player.velocity[0] = 0
-    #     handle_slider_events(event)
-    #     manager.process_events(event)
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            running = False
+        handle_slider_events(event)
+        manager.process_events(event)
 
     player.update()
     player_center_x = player.x + player.rect.width/2  - pagent.rect.width/2
@@ -221,7 +142,12 @@ while running:
     pagent_x, pagent_y = agent.get_position()[:2]
     arm.set_mode(1)
     arm.set_state(0)
-    arm.set_servo_cartesian([max(float(x_min),float(pagent_x)), pagent_y, xarm_z, 180, 0, 0], speed=5, mvacc=2000)
+    
+    # Apply boundary constraints to robot position
+    robot_x = max(float(x_min), min(float(x_max), float(pagent_x)))
+    robot_y = max(float(y_min), min(float(y_max), float(pagent_y)))
+    
+    arm.set_servo_cartesian([robot_x, robot_y, xarm_z, 180, 0, 0], speed=5, mvacc=2000)
     agent.kp = kp_slider.get_current_value()
     agent.kd = kd_slider.get_current_value()
     agent.steering_scalar = steering_scalar_slider.get_current_value()

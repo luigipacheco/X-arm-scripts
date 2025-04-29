@@ -26,10 +26,9 @@ from classes import pAgent
 from classes import Player
 from oneefilter import OneEuroFilter
 from oneefilter import LowPassFilter
+import bpy
 
-
-
-arm = XArmAPI("192.168.1.217")
+arm = XArmAPI("192.168.1.240")
 arm.connect()
 xarm_position = arm.get_position()
 xarm_x = xarm_position[1][0]
@@ -202,9 +201,16 @@ steering_scalar_label = pygame_gui.elements.UILabel(
     manager=manager,
 )
 
-cap = cv2.VideoCapture()
-ocv_w= cap.get(3)  # float `width`
-ocv_h = cap.get(4)  # float `height`
+# Initialize camera
+cap = cv2.VideoCapture(0)  # Use 0 for default camera, or try other numbers if you have multiple cameras
+if not cap.isOpened():
+    print("Error: Could not open camera")
+    exit()
+
+# Get camera properties
+ocv_w = cap.get(cv2.CAP_PROP_FRAME_WIDTH)
+ocv_h = cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
+print(f"Camera resolution: {ocv_w}x{ocv_h}")
 
 ####---------------------- CALIBRATION ---------------------------
 # termination criteria for the iterative algorithm
@@ -245,29 +251,58 @@ for fname in images:
 
 ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(objpoints, imgpoints, gray.shape[::-1],None,None)
 
+def my_estimatePoseSingleMarkers(corners, marker_size, mtx, distortion):
+    '''
+    This will estimate the rvec and tvec for each of the marker corners detected by:
+       corners, ids, rejectedImgPoints = detector.detectMarkers(image)
+    corners - is an array of detected corners for each detected marker in the image
+    marker_size - is the size of the detected markers
+    mtx - is the camera matrix
+    distortion - is the camera distortion matrix
+    RETURN list of rvecs, tvecs, and trash (so that it corresponds to the old estimatePoseSingleMarkers())
+    '''
+    marker_points = np.array([[-marker_size / 2, marker_size / 2, 0],
+                              [marker_size / 2, marker_size / 2, 0],
+                              [marker_size / 2, -marker_size / 2, 0],
+                              [-marker_size / 2, -marker_size / 2, 0]], dtype=np.float32)
+    trash = []
+    rvecs = []
+    tvecs = []
+    for c in corners:
+        nada, R, t = cv2.solvePnP(marker_points, c, mtx, distortion, False, cv2.SOLVEPNP_IPPE_SQUARE)
+        rvecs.append(R)
+        tvecs.append(t)
+        trash.append(nada)
+    return rvecs, tvecs, trash
+
 ###------------------ ARUCO TRACKER ---------------------------
 while (True):
-    dt = clock.tick(FPS) / 1000  # Returns milliseconds between each call to 'tick'. The convert time to seconds.
-    screen.fill(BLACK)  # Fill the screen with background color.
-
+    dt = clock.tick(FPS) / 1000
+    screen.fill(BLACK)
+    
+    # Read camera frame with error handling
     ret, frame = cap.read()
-    #if ret returns false, there is likely a problem with the webcam/camera.
-    #In that case uncomment the below line, which will replace the empty frame 
-    #with a test image used in the opencv docs for aruco at https://www.docs.opencv.org/4.5.3/singlemarkersoriginal.jpg
-    # frame = cv2.imread('./images/test image.jpg') 
-
+    if not ret:
+        print("Error: Could not read frame from camera")
+        continue
+        
+    if frame is None:
+        print("Error: Frame is None")
+        continue
+        
     # operations on the frame
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
     # set dictionary size depending on the aruco marker selected
-    aruco_dict = aruco.Dictionary_get(aruco.DICT_6X6_250)
+    aruco_dict = aruco.getPredefinedDictionary(aruco.DICT_6X6_250)
 
     # detector parameters can be set here (List of detection parameters[3])
-    parameters = aruco.DetectorParameters_create()
+    parameters = aruco.DetectorParameters()
     parameters.adaptiveThreshConstant = 10
 
     # lists of ids and the corners belonging to each id
-    corners, ids, rejectedImgPoints = aruco.detectMarkers(gray, aruco_dict, parameters=parameters)
+    detector = aruco.ArucoDetector(aruco_dict, parameters)
+    corners, ids, rejectedImgPoints = detector.detectMarkers(gray)
 
     # font for displaying text (below)
     font = cv2.FONT_HERSHEY_SIMPLEX
@@ -278,19 +313,17 @@ while (True):
         player.color=RED 
         # estimate pose of each marker and return the values
         # rvet and tvec-different from camera coefficients
-        rvec, tvec ,_ = aruco.estimatePoseSingleMarkers(corners, 0.05, mtx, dist)
-        #(rvec-tvec).any() # get rid of that nasty numpy value array error
+        rvecs, tvecs, _ = my_estimatePoseSingleMarkers(corners, 0.05, mtx, dist)
 
         for i in range(0, ids.size):
             # draw axis for the aruco markers
-            cv2.drawFrameAxes(frame, mtx, dist, rvec[i], tvec[i], 0.05)
+            cv2.drawFrameAxes(frame, mtx, dist, rvecs[i], tvecs[i], 0.05)
         # draw a square around the markers
         aruco.drawDetectedMarkers(frame, corners)
 
         aruco_x = int((corners[0][0][0][0]+corners[0][0][1][0]+corners[0][0][2][0]+corners[0][0][3][0])/4)  #use central cordinates from aruco
         aruco_y = int((corners[0][0][0][1] + corners[0][0][1][1] + corners[0][0][2][1] + corners[0][0][3][1]) / 4) #use central cordinates from aruco
-        aruco_z = tvec[0][0][2]
-        #print(aruco_z)
+        aruco_z = tvecs[0][2][0]  # Changed indexing to match solvePnP output
 
         normalizedxy = screen_to_normal(aruco_x,aruco_y,ocv_w,ocv_h)
         player_z= nmap(aruco_z,0,0.5,z_min,z_max)
@@ -301,13 +334,13 @@ while (True):
         #print(aruco_x,",",aruco_y)
         #print(tvec[0][0][0]*1000,",",tvec[0][0][1]*1000,",",tvec[0][0][2]*1000)
         if use_rot:
-            aruco_rx = math.degrees(rvec[0][0][0])
+            aruco_rx = math.degrees(rvecs[0][0][0])  # Changed indexing to match solvePnP output
             if aruco_rx < 0 :
                 aruco_rx = (180+aruco_rx)*-1
             else:
                 aruco_rx = 180-aruco_rx         
-            aruco_ry = math.degrees(rvec[0][0][1])
-            aruco_rz = math.degrees(rvec[0][0][2])
+            aruco_ry = math.degrees(rvecs[0][1][0])  # Changed indexing to match solvePnP output
+            aruco_rz = math.degrees(rvecs[0][2][0])  # Changed indexing to match solvePnP output
             ts = time.time()
             if aruco_rx > 0 : 
                 aruco_rz = aruco_rz*-1

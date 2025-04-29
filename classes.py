@@ -119,10 +119,23 @@ class pAgent(pygame.sprite.Sprite):
         self.image.fill(color)
         self.rect = self.image.get_rect()  # Get rect of some size as 'image'.
         self.velocity = [0, 0]
+        # Define boundaries (same as in agent.py)
+        self.x_min = 205
+        self.x_max = 700
+        self.y_min = -400
+        self.y_max = 400
 
     def update(self,agent):
-        self.rect.x = agent.get_position()[0]
-        self.rect.y = agent.get_position()[1]
+        # Get the position from the agent
+        pos_x, pos_y = agent.get_position()[:2]
+        
+        # Apply boundary constraints
+        pos_x = max(self.x_min, min(self.x_max, pos_x))
+        pos_y = max(self.y_min, min(self.y_max, pos_y))
+        
+        # Update the position
+        self.rect.x = pos_x
+        self.rect.y = pos_y
 
 class Player(pygame.sprite.Sprite):
     def __init__(self, color,targetx,targety):
@@ -140,13 +153,10 @@ class Player(pygame.sprite.Sprite):
         self.image.fill(color)
         self.color = color
 
-    def update(self,use_opencv=True):
+    def update(self):
         self.change_color(self.color)
-        if not use_opencv:
-            self.rect.move_ip(*self.velocity)
-            self.x = self.rect.x
-            self.y = self.rect.y
-        else:
-            self.rect.x = self.x
-            self.rect.y = self.y
+        self.x += self.velocity[0]
+        self.y += self.velocity[1]
+        self.rect.x = self.x
+        self.rect.y = self.y
 

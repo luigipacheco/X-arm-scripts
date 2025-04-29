@@ -27,7 +27,7 @@ pygame.init()
 pygame.joystick.init()
 
 # Connect to the xArm at the given IP address
-arm = XArmAPI("192.168.1.217")
+arm = XArmAPI("192.168.1.240")
 arm.connect()
 
 #start osc 
