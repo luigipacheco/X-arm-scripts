@@ -36,6 +36,9 @@ class XArmController(bpy.types.Operator):
     _timer = None
     _empty_name = "tcp_target"  # Updated name
     _last_position = None
+    _last_empty_position = None  # Store last Empty position
+    _max_movement = 50  # Maximum allowed movement in mm
+    _is_out_of_range = False  # Track if we're currently out of range
     
     def get_world_position_rotation(self, obj):
         """Get object's world space position and rotation"""
@@ -76,6 +79,26 @@ class XArmController(bpy.types.Operator):
                 
                 # Create position array for validation
                 new_pos = [robot_x, robot_y, robot_z, robot_rx, robot_ry, robot_rz]
+                
+                # Check for sudden movements
+                if self._last_empty_position is not None:
+                    dx = robot_x - self._last_empty_position[0]
+                    dy = robot_y - self._last_empty_position[1]
+                    dz = robot_z - self._last_empty_position[2]
+                    distance = math.sqrt(dx*dx + dy*dy + dz*dz)
+                    
+                    if distance > self._max_movement:
+                        if not self._is_out_of_range:
+                            print(f"Movement too large ({distance:.1f}mm), pausing updates")
+                            self._is_out_of_range = True
+                        context.scene.xarm_status = f"Movement too large ({distance:.1f}mm), waiting for safe position"
+                        return {'PASS_THROUGH'}
+                    elif self._is_out_of_range:
+                        print(f"Empty back in range, resuming updates")
+                        self._is_out_of_range = False
+                
+                # Store current position as last valid position
+                self._last_empty_position = [robot_x, robot_y, robot_z]
                 
                 # Validate position values
                 if not self.validate_position(new_pos):
@@ -128,6 +151,17 @@ class XArmController(bpy.types.Operator):
                 name="XArm Status",
                 default="Initializing..."
             )
+        
+        # Initialize last position with current Empty position
+        empty = bpy.data.objects.get(self._empty_name)
+        if empty is not None:
+            location, _ = self.get_world_position_rotation(empty)
+            self._last_empty_position = [
+                location.x * robotscale,
+                location.y * robotscale,
+                location.z * robotscale
+            ]
+            print(f"Initialized last position: {self._last_empty_position}")
         
         wm = context.window_manager
         self._timer = wm.event_timer_add(0.02, window=context.window)  # 50Hz update rate
