@@ -11,7 +11,7 @@ import time
 import numpy as np
 
 class Agent:
-    """A tracked point that reports when it enters and exits a designated Tracking Zone  (Class copied and adapted from Madeline Gannon) """
+    """A tracked point that reports when it enters and exits a designated Tracking Zone  (Class ported from Madeline Gannon) """
 
     def __init__(
         self,
